@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"log"
 	"sync/atomic"
+	"time"
 )
 
 var fatalStop = make(chan struct{})
-
 var fatalOnce atomic.Bool
 
 const maxRetries = 2
@@ -16,8 +16,13 @@ const maxRetries = 2
 // All subsequent Send calls check this flag and bail immediately.
 var queueStopped int32
 
+// ============================
+// ✅ UPDATED RETRYABLE ERROR
+// ============================
+// Agent decides retry delay now
+
 // withRetry executes sendFn up to maxRetries times.
-// Transport failures will retry.
+// RetryableError will HOLD batch and retry forever after 30s.
 // Unauthorized agent errors will STOP immediately.
 func withRetry(label string, sendFn func() error) error {
 
@@ -40,10 +45,54 @@ func withRetry(label string, sendFn func() error) error {
 		if _, ok := lastErr.(UnauthorizedError); ok {
 			log.Printf("[retry] unauthorized agent — stopping queue")
 			atomic.StoreInt32(&queueStopped, 1)
+
+			if fatalOnce.CompareAndSwap(false, true) {
+				close(fatalStop)
+			}
+
 			return lastErr
 		}
 
-		// Otherwise transport/network error → retry
+		// ============================
+		// 🟡 SOC BACKPRESSURE (retry)
+		// ============================
+		if _, ok := lastErr.(RetryableError); ok {
+
+			log.Printf("[retry] SOC backpressure — holding batch and retrying every 30s")
+
+			for {
+
+				time.Sleep(30 * time.Second)
+
+				if !checkServerReachable() {
+					log.Printf("[retry] SOC still unreachable — waiting again")
+					continue
+				}
+
+				log.Printf("[retry] SOC reachable — retrying same batch")
+
+				err := sendFn()
+
+				if err == nil {
+					return nil
+				}
+
+				if _, ok := err.(UnauthorizedError); ok {
+					log.Printf("[retry] agent revoked during retry — stopping queue")
+					atomic.StoreInt32(&queueStopped, 1)
+
+					if fatalOnce.CompareAndSwap(false, true) {
+						close(fatalStop)
+					}
+
+					return err
+				}
+
+				log.Printf("[retry] retry failed — will retry again")
+			}
+		}
+
+		// 🔁 Transport / Network Failure
 		log.Printf("[retry] %s attempt %d/%d failed: %v",
 			label,
 			attempt,
@@ -52,22 +101,20 @@ func withRetry(label string, sendFn func() error) error {
 		)
 	}
 
-	// Transport failure only — DO NOT STOP AGENT
-	log.Printf("[retry] %s transport failure after %d retries — will retry on next flush",
+	// Transport failure exhausted — DO NOT STOP AGENT
+	log.Printf("[retry] %s delivery failed after %d retries — will retry on next flush",
 		label,
 		maxRetries,
 	)
 
-	if fatalOnce.CompareAndSwap(false, true) {
-		close(fatalStop)
-	}
-
 	return lastErr
 }
 
+// FatalStopChan returns a channel that closes when SOC revokes the agent.
 func FatalStopChan() <-chan struct{} {
 	return fatalStop
 }
+
 // IsStopped reports whether the queue has been stopped due to SOC revocation.
 func IsStopped() bool {
 	return atomic.LoadInt32(&queueStopped) == 1

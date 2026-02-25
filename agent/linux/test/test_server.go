@@ -83,7 +83,7 @@ func logs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 🚨 WHITELIST CHECK
+	//  WHITELIST CHECK
 	if !isAgentAllowed(agentID) {
 
 		log.Printf("[server] rejected agent=%s", agentID)
@@ -147,7 +147,7 @@ func saveBatch(b StoredBatch) {
 
 func main() {
 
-	http.HandleFunc("/logs", logs)
+	http.HandleFunc("/api/v1/logs", logs)
 
 	log.Println("🚀 Whitelist Test Server Running on :8080")
 	http.ListenAndServe(":8080", nil)

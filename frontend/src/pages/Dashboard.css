@@ -1,0 +1,145 @@
+.page-container {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.page-header h2 {
+  font-size: 1.75rem;
+  color: var(--text-primary);
+}
+
+.range-selector {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.range-btn {
+  padding: 0.5rem 1rem;
+  background-color: var(--bg-dark);
+  color: var(--text-secondary);
+  border: 1px solid var(--blue-border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+
+.range-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--blue-light);
+}
+
+.range-btn.active {
+  background-color: rgba(30, 58, 138, 0.2);
+  color: var(--blue-light);
+  border-color: var(--blue-light);
+}
+
+.loading, .error {
+  text-align: center;
+  padding: 3rem;
+  font-size: 1.125rem;
+  color: var(--text-secondary);
+}
+
+.error {
+  color: var(--error);
+}
+
+/* Metrics Grid */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.metric-card {
+  background-color: var(--bg-dark);
+  border: 2px solid var(--blue-border);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.metric-card.error-card {
+  border-color: var(--error);
+}
+
+.metric-card.warning-card {
+  border-color: var(--warning);
+}
+
+.metric-label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.metric-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* Lists Grid */
+.lists-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 1.5rem;
+}
+
+.list-card {
+  background-color: var(--bg-dark);
+  border: 2px solid var(--blue-border);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.list-card h3 {
+  font-size: 1.125rem;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--blue-border);
+}
+
+.list-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  transition: border-color 0.2s;
+}
+
+.list-item:hover {
+  border-color: var(--blue-border);
+}
+
+.item-name {
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.item-count {
+  color: var(--blue-light);
+  font-weight: 600;
+  font-size: 0.9rem;
+}

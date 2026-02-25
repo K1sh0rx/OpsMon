@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url" // ✅ ADDED
 	"os"
 	"time"
 
@@ -15,7 +16,7 @@ import (
 
 const (
 	serverURL   = "http://localhost:8080" // override via ENV: OPSMON_SERVER
-	logsPath    = "/logs"
+	logsPath    = "/api/v1/logs"
 	httpTimeout = 10 * time.Second
 )
 
@@ -29,6 +30,20 @@ func baseURL() string {
 }
 
 // ============================
+// ✅ ADDED HOST EXTRACTOR
+// ============================
+
+func baseURLHost() string {
+
+	u, err := url.Parse(baseURL())
+	if err != nil {
+		return "localhost"
+	}
+
+	return u.Hostname()
+}
+
+// ============================
 // UNAUTHORIZED ERROR TYPE
 // ============================
 
@@ -38,6 +53,16 @@ type UnauthorizedError struct {
 
 func (e UnauthorizedError) Error() string {
 	return e.msg
+}
+
+// ============================
+// ✅ ADDED RETRYABLE ERROR TYPE
+// ============================
+
+type RetryableError struct{}
+
+func (e RetryableError) Error() string {
+	return "server requested retry"
 }
 
 // ============================
@@ -85,17 +110,29 @@ func postBatch(batch common.WorkerBatch) error {
 		return nil
 	}
 
-	// 🚨 SOC REJECTION
-	if dr.Status != "success" {
+	// ============================
+	// ✅ UPDATED SOC RESPONSE HANDLING
+	// ============================
 
-		log.Printf("[sender] SERVER REJECTED AGENT: %s", dr.Description)
+	switch dr.Status {
 
+	case "success":
+		return nil
+
+	case "error":
+		log.Printf("[sender] SERVER REVOKED AGENT: %s", dr.Description)
 		return UnauthorizedError{
 			msg: dr.Description,
 		}
-	}
 
-	return nil
+	case "retry":
+		log.Printf("[sender] SERVER BACKPRESSURE — retry later")
+		return RetryableError{}
+
+	default:
+		log.Printf("[sender] unknown SOC status: %s", dr.Status)
+		return fmt.Errorf("unknown SOC status")
+	}
 }
 
 // ============================

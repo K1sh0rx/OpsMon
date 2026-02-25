@@ -1,0 +1,29 @@
+[
+  {
+    "id": "alert-001",
+    "timestamp": "2026-02-24T10:23:15Z",
+    "severity": "high",
+    "title": "Multiple Failed SSH Login Attempts",
+    "description": "5 failed SSH login attempts detected from 203.0.113.42 to production-web-01",
+    "rule_name": "brute_force_ssh",
+    "host": "production-web-01",
+    "source_ip": "203.0.113.42",
+    "log_id": "es_doc_12345",
+    "status": "new",
+    "created_at": "2026-02-24T10:23:15Z",
+    "updated_at": "2026-02-25T04:01:47.030988746Z"
+  },
+  {
+    "id": "alert-002",
+    "timestamp": "2026-02-24T09:15:30Z",
+    "severity": "critical",
+    "title": "Privilege Escalation Attempt",
+    "description": "User 'webapp' attempted to execute sudo without proper authorization",
+    "rule_name": "privilege_escalation",
+    "host": "app-server-03",
+    "log_id": "es_doc_12346",
+    "status": "false_positive",
+    "created_at": "2026-02-24T09:15:30Z",
+    "updated_at": "2026-02-25T04:02:32.012455859Z"
+  }
+]

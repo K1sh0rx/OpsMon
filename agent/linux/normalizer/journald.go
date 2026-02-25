@@ -1,38 +1,42 @@
 package normalizer
 
 import (
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/K1sh0rx/OpsMon/agent/linux/common"
+	"github.com/K1sh0rx/OpsMon/agent/linux/collector"
 )
 
-// JournaldEntry is the raw JSON structure from `journalctl -o json`.
-// Only the fields we care about are mapped.
-type JournaldEntry struct {
-	Message          string `json:"MESSAGE"`
-	Priority         string `json:"PRIORITY"`
-	SyslogFacility   string `json:"SYSLOG_FACILITY"`
-	SyslogIdentifier string `json:"SYSLOG_IDENTIFIER"`
-	Hostname         string `json:"_HOSTNAME"`
-	PID              string `json:"_PID"`
-	UID              string `json:"_UID"`
-	GID              string `json:"_GID"`
-	Exe              string `json:"_EXE"`
-	Cmdline          string `json:"_CMDLINE"`
-	AuditSession     string `json:"_AUDIT_SESSION"`
-	AuditLoginUID    string `json:"_AUDIT_LOGINUID"`
-	// Realtime timestamp in microseconds since epoch (journald format)
-	RealtimeTimestamp string `json:"__REALTIME_TIMESTAMP"`
-	Cursor            string `json:"__CURSOR"`
-}
+var ansiRegex = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
 
-// NormalizeJournald converts a raw JournaldEntry into a NormalizedLog.
-func NormalizeJournald(e JournaldEntry) common.NormalizedLog {
+func NormalizeJournald(e collector.JournaldRawEntry) common.NormalizedLog {
+
+	msg := stringifyMessage(e.Message)
+
+	if msg == "" {
+		msg = strings.TrimSpace(e.SyslogIdentifier)
+	}
+	if msg == "" {
+		msg = strings.TrimSpace(e.Exe)
+	}
+	if msg == "" {
+		msg = trimCmdline(e.Cmdline)
+	}
+	if msg == "" {
+		msg = "[JOURNALD_EMPTY]"
+	}
+
+	host := strings.TrimSpace(e.Hostname)
+	if host == "" {
+		host = "unknown"
+	}
+
 	return common.NormalizedLog{
 		Timestamp:     parseJournaldTimestamp(e.RealtimeTimestamp),
-		Host:          e.Hostname,
-		Message:       e.Message,
+		Host:          host,
+		Message:       msg,
 		Severity:      mapPriority(e.Priority),
 		Facility:      mapFacility(e.SyslogFacility),
 		Transport:     "journald",
@@ -47,7 +51,34 @@ func NormalizeJournald(e JournaldEntry) common.NormalizedLog {
 	}
 }
 
+func stringifyMessage(msg any) string {
+
+	switch v := msg.(type) {
+
+	case string:
+		return clean(v)
+
+	case []any:
+		b := make([]byte, len(v))
+		for i, n := range v {
+			if f, ok := n.(float64); ok {
+				b[i] = byte(f)
+			}
+		}
+		return clean(string(b))
+
+	default:
+		return ""
+	}
+}
+
+func clean(s string) string {
+	s = ansiRegex.ReplaceAllString(s, "")
+	return strings.TrimSpace(s)
+}
+
 // parseJournaldTimestamp converts journald's microsecond epoch string to time.Time.
+
 func parseJournaldTimestamp(usec string) time.Time {
 	if usec == "" {
 		return time.Now().UTC()

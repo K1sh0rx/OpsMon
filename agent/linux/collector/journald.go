@@ -6,27 +6,40 @@ import (
 	"encoding/json"
 	"log"
 	"os/exec"
-
-	"github.com/K1sh0rx/OpsMon/agent/linux/normalizer"
 )
 
-// JournaldEntry mirrors normalizer.JournaldEntry — we decode into this then normalize.
-// Re-exported here so the worker doesn't import normalizer directly.
-type JournaldRawEntry = normalizer.JournaldEntry
+// RAW journald structure (safe decode)
+type JournaldRawEntry struct {
+	Message            any    `json:"MESSAGE"`
+	Priority           string `json:"PRIORITY"`
+	SyslogFacility     string `json:"SYSLOG_FACILITY"`
+	SyslogIdentifier   string `json:"SYSLOG_IDENTIFIER"`
+	Hostname           string `json:"_HOSTNAME"`
+	PID                string `json:"_PID"`
+	UID                string `json:"_UID"`
+	GID                string `json:"_GID"`
+	Exe                string `json:"_EXE"`
+	Cmdline            string `json:"_CMDLINE"`
+	AuditSession       string `json:"_AUDIT_SESSION"`
+	AuditLoginUID      string `json:"_AUDIT_LOGINUID"`
+	RealtimeTimestamp  string `json:"__REALTIME_TIMESTAMP"`
+	Cursor             string `json:"__CURSOR"`
+}
 
-// StreamJournald launches `journalctl -o json -f [--after-cursor=<cursor>]`
-// and streams decoded JournaldRawEntry values to the returned channel.
-// The channel is closed when ctx is cancelled or journalctl exits.
 func StreamJournald(ctx context.Context, cursor string) <-chan JournaldRawEntry {
 	out := make(chan JournaldRawEntry, 64)
 
 	go func() {
 		defer close(out)
 
-		args := []string{"-o", "json", "-f", "-n", "0"}
-		if cursor != "" {
-			args = append(args, "--after-cursor="+cursor)
+		var args []string
+
+		if cursor == "" {
+			log.Println("[collector/journald] first start — reading last 24h logs")
+			args = []string{"-o", "json", "--since", "24 hours ago", "-f"}
+		} else {
 			log.Printf("[collector/journald] resuming from cursor: %s", cursor)
+			args = []string{"-o", "json", "-f", "--after-cursor=" + cursor}
 		}
 
 		cmd := exec.CommandContext(ctx, "journalctl", args...)
@@ -42,28 +55,21 @@ func StreamJournald(ctx context.Context, cursor string) <-chan JournaldRawEntry 
 		}
 
 		scanner := bufio.NewScanner(stdout)
-		// Journal entries can be large; increase buffer.
 		scanner.Buffer(make([]byte, 256*1024), 256*1024)
 
 		for scanner.Scan() {
-			line := scanner.Bytes()
 			var entry JournaldRawEntry
-			if err := json.Unmarshal(line, &entry); err != nil {
+			if err := json.Unmarshal(scanner.Bytes(), &entry); err != nil {
 				log.Printf("[collector/journald] unmarshal error: %v", err)
 				continue
 			}
+
 			select {
 			case out <- entry:
 			case <-ctx.Done():
 				return
 			}
 		}
-
-		if err := scanner.Err(); err != nil && ctx.Err() == nil {
-			log.Printf("[collector/journald] scanner error: %v", err)
-		}
-
-		cmd.Wait()
 	}()
 
 	return out
