@@ -87,7 +87,7 @@ func (h *AnalyticsHandler) GetAlertTrend(w http.ResponseWriter, r *http.Request)
 		rangeParam = "24h"
 	}
 
-	start, _ := getTimeRange(rangeParam)
+	start, end := getTimeRange(rangeParam)
 	interval := getInterval(rangeParam)
 
 	var points []TimeSeriesPoint
@@ -95,7 +95,7 @@ func (h *AnalyticsHandler) GetAlertTrend(w http.ResponseWriter, r *http.Request)
 
 	alerts, _ := h.store.LoadAlerts()
 
-	for i := 0; i < 10; i++ {
+	for current.Before(end) {
 
 		next := current.Add(interval)
 		count := 0

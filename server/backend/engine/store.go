@@ -1,14 +1,29 @@
+// store.go
+
 package engine
 
 import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 )
 
-const alertsFile = "backend/engine/alerts.json"
+// ✅ FIX: Use working directory + relative path for portability
+var alertsFile string
+
+func init() {
+	// Get current working directory
+	wd, err := os.Getwd()
+	if err != nil {
+		// Fallback to relative path
+		alertsFile = "backend/engine/alerts.json"
+	} else {
+		alertsFile = filepath.Join(wd, "backend", "engine", "alerts.json")
+	}
+}
 
 // Alert represents a security alert
 type Alert struct {
@@ -121,8 +136,8 @@ func (s *AlertStore) GetAlertsByTimeRange(start, end time.Time) ([]Alert, error)
 
 	var filtered []Alert
 	for _, alert := range s.alerts {
-		if (alert.Timestamp.Equal(start) || alert.Timestamp.After(start)) &&
-			(alert.Timestamp.Equal(end) || alert.Timestamp.Before(end)) {
+		if (alert.CreatedAt.Equal(start) || alert.CreatedAt.After(start)) &&
+			(alert.CreatedAt.Equal(end) || alert.CreatedAt.Before(end)) {
 			filtered = append(filtered, alert)
 		}
 	}
@@ -136,8 +151,8 @@ func (s *AlertStore) CountAlertsByTimeRange(start, end time.Time) int {
 
 	count := 0
 	for _, alert := range s.alerts {
-		if (alert.Timestamp.Equal(start) || alert.Timestamp.After(start)) &&
-			(alert.Timestamp.Equal(end) || alert.Timestamp.Before(end)) {
+		if (alert.CreatedAt.Equal(start) || alert.CreatedAt.After(start)) &&
+			(alert.CreatedAt.Equal(end) || alert.CreatedAt.Before(end)) {
 			count++
 		}
 	}
@@ -166,7 +181,8 @@ func (s *AlertStore) load() error {
 // save writes alerts to disk atomically (caller must hold write lock)
 func (s *AlertStore) save() error {
 	// Create directory if not exists
-	if err := os.MkdirAll("backend/engine", 0755); err != nil {
+	dir := filepath.Dir(alertsFile)
+	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("create directory: %w", err)
 	}
 

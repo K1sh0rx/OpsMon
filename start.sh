@@ -42,6 +42,13 @@ stop_stack() {
     echo "Stopping Frontend..."
     kill $(cat frontend/.frontend.pid) 2>/dev/null
 
+    sudo rm /var/lib/opsmon/*
+    rm /home/k1sh0rx/fucker/OpsMon/server/backend/engine/alerts.json
+    rm /home/k1sh0rx/fucker/OpsMon/server/backend/engine/cursor.json
+
+    rm /home/k1sh0rx/fucker/OpsMon/server/opsmon
+
+
     echo "Stopping Elasticsearch..."
     docker compose -f $COMPOSE_FILE down
 }

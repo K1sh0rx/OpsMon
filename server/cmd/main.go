@@ -49,6 +49,8 @@ func main() {
 
 	backendModule.RegisterRoutes(mux)
 
+	backendModule.StartEngine()
+
 	// ---------------- HTTP SERVER ----------------
 	server := &http.Server{
 		Addr:         ":" + common.AppConfig.ServerPort,
