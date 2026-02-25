@@ -1,0 +1,62 @@
+# =========================
+# OS
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# FRONTEND (React/Vite)
+# =========================
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.env
+frontend/.frontend.pid
+
+# =========================
+# BACKEND (Go)
+# =========================
+server/opsmon
+server/*.pid
+server/.backend.pid
+server/bin/
+server/tmp/
+server/vendor/
+
+# =========================
+# ALERT RUNTIME DATA
+# =========================
+server/backend/engine/alerts.json
+
+# =========================
+# DOCKER
+# =========================
+*.log
+docker-data/
+pipeline/esdata/
+pipeline/kibanadata/
+
+# =========================
+# GO BUILD CACHE
+# =========================
+*.exe
+*.out
+*.test
+*.prof
+*.cover
+go.work
+go.work.sum
+
+# =========================
+# IDE
+# =========================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# =========================
+# TEMP FILES
+# =========================
+*.tmp
+*.bak
